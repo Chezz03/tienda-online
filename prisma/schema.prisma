@@ -1,0 +1,101 @@
+// Esquema de base de datos de la tienda
+// Ejecutar: npx prisma migrate dev --name init
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Categoria {
+  id            String      @id @default(cuid())
+  nombre        String
+  slug          String      @unique
+  categoriaPadreId String?
+  categoriaPadre   Categoria?  @relation("SubCategorias", fields: [categoriaPadreId], references: [id])
+  subcategorias    Categoria[] @relation("SubCategorias")
+  productos     Producto[]
+  createdAt     DateTime    @default(now())
+}
+
+model Producto {
+  id            String      @id @default(cuid())
+  nombre        String
+  slug          String      @unique
+  descripcion   String
+  precioBase    Decimal
+  descuento     Int         @default(0) // porcentaje
+  destacado     Boolean     @default(false)
+  categoriaId   String
+  categoria     Categoria   @relation(fields: [categoriaId], references: [id])
+  imagenes      ImagenProducto[]
+  variantes     Variante[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model ImagenProducto {
+  id          String   @id @default(cuid())
+  url         String
+  orden       Int      @default(0)
+  productoId  String
+  producto    Producto @relation(fields: [productoId], references: [id])
+}
+
+model Variante {
+  id          String   @id @default(cuid())
+  nombre      String   // ej: "10x34cm"
+  precio      Decimal
+  stock       Int      @default(0)
+  productoId  String
+  producto    Producto @relation(fields: [productoId], references: [id])
+  itemsPedido ItemPedido[]
+}
+
+model Usuario {
+  id          String   @id @default(cuid())
+  nombre      String
+  email       String   @unique
+  password    String
+  pedidos     Pedido[]
+  createdAt   DateTime @default(now())
+}
+
+model Pedido {
+  id              String   @id @default(cuid())
+  usuarioId       String?
+  usuario         Usuario? @relation(fields: [usuarioId], references: [id])
+  items           ItemPedido[]
+  estado          EstadoPedido @default(PENDIENTE)
+  medioPago       MedioPago
+  costoEnvio      Decimal
+  codigoPostal    String
+  total           Decimal
+  createdAt       DateTime @default(now())
+}
+
+model ItemPedido {
+  id          String   @id @default(cuid())
+  pedidoId    String
+  pedido      Pedido   @relation(fields: [pedidoId], references: [id])
+  varianteId  String
+  variante    Variante @relation(fields: [varianteId], references: [id])
+  cantidad    Int
+  precioUnitario Decimal
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  PAGADO
+  ENVIADO
+  ENTREGADO
+  CANCELADO
+}
+
+enum MedioPago {
+  MERCADOPAGO
+  TRANSFERENCIA
+}
